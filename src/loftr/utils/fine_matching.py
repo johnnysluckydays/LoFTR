@@ -66,8 +66,18 @@ class FineMatching(nn.Module):
         # mkpts0_f and mkpts1_f
         mkpts0_f = data['mkpts0_c']
         scale1 = scale * data['scale1'][data['b_ids']] if 'scale0' in data else scale
-        mkpts1_f = data['mkpts1_c'] + (coords_normed * (W // 2) * scale1)[:len(data['mconf'])]
 
+        if self.training:
+            mkpts1_f = data['mkpts1_c'] + (coords_normed * (W // 2) * scale1)[:len(data['mconf'])]
+        else:
+            
+            """
+            when run onnx inference, it will produce exception as follows:
+            Non-zero status code returned while running Add node. Name:'/fine_matching/Add_x'
+            Attempting to broadcast an axis by a dimension other than 1. 2408 by 2707
+            fix: remove redundant slice in FineMatching for ONNX export
+            """
+            mkpts1_f = data['mkpts1_c'] + coords_normed * (W // 2) * scale1
         data.update({
             "mkpts0_f": mkpts0_f,
             "mkpts1_f": mkpts1_f
